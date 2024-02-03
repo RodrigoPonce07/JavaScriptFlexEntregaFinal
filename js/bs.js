@@ -4,18 +4,20 @@ let historialPrecios = JSON.parse(localStorage.getItem("historialPrecios")) || [
 document.getElementById("precioBoton").addEventListener("click", function () {
     const nuevoPrecio = parseFloat(document.getElementById("precioInput").value);
 
-    if (!isNaN(nuevoPrecio)) {
-        historialPrecios.push(nuevoPrecio);
-        sumaTotal += nuevoPrecio;
-        document.getElementById("precioTotal").textContent = sumaTotal.toFixed(2);
-        actualizarLocalStorage();
-    } else {
-        Swal.fire({
-            title: "",
-            text: "Por favor, ingrese un número válido",
-            icon: "warning"
+    validarPrecio(nuevoPrecio)
+        .then(() => {
+            historialPrecios.push(nuevoPrecio);
+            sumaTotal += nuevoPrecio;
+            document.getElementById("precioTotal").textContent = sumaTotal.toFixed(2);
+            return actualizarLocalStorage();
+        })
+        .catch(error => {
+            Swal.fire({
+                title: "",
+                text: error.message,
+                icon: "warning"
+            });
         });
-    }
 });
 
 var storedPrecioTotal = localStorage.getItem("precioTotal");
@@ -31,34 +33,86 @@ if (storedCorreoInput !== null) {
 
 document.getElementById("formularioMail").addEventListener("submit", function (event) {
     event.preventDefault();
-    var correoInput = document.getElementById("correoInput").value;
+    const correoInput = document.getElementById("correoInput").value;
 
-    if (correoInput.trim() === "") {
-        Swal.fire({
-            title: "",
-            text: "Por favor, ingrese un correo",
-            icon: "error"
+    validarCorreo(correoInput)
+        .then(() => {
+            localStorage.setItem("correoInput", correoInput);
+            Swal.fire({
+                title: "GENIAL",
+                text: "Nos pondremos en contacto contigo",
+                icon: "success"
+            });
+        })
+        .catch(error => {
+            Swal.fire({
+                title: "",
+                text: error.message,
+                icon: "error"
+            });
         });
-    } else {
-        localStorage.setItem("correoInput", correoInput);
-        Swal.fire({
-            title: "GENIAL",
-            text: "Nos pondremos en contacto contigo",
-            icon: "success"
-        });
-    }
 });
 
 
 document.getElementById("resetearBoton").addEventListener("click", function () {
-    sumaTotal = 0;
-    historialPrecios = [];
-    document.getElementById("precioTotal").textContent = sumaTotal.toFixed(2);
-    actualizarLocalStorage();
+    resetearValores()
+        .then(() => {
+            console.log("Código en el bloque finally");
+        })
+        .catch(error => {
+            Swal.fire({
+                title: "",
+                text: error.message,
+                icon: "error"
+            });
+        });
 });
 
 
+function validarPrecio(precio) {
+    return new Promise((resolve, reject) => {
+        if (!isNaN(precio)) {
+            resolve();
+        } else {
+            reject(new Error("Por favor, ingrese un número válido"));
+        }
+    });
+}
+
+
+function validarCorreo(correo) {
+    return new Promise((resolve, reject) => {
+        if (correo.trim() !== "") {
+            resolve();
+        } else {
+            reject(new Error("Por favor, ingrese un correo"));
+        }
+    });
+}
+
+
 function actualizarLocalStorage() {
-    localStorage.setItem("historialPrecios", JSON.stringify(historialPrecios));
-    localStorage.setItem("precioTotal", sumaTotal.toFixed(2));
+    return new Promise((resolve, reject) => {
+        try {
+            localStorage.setItem("historialPrecios", JSON.stringify(historialPrecios));
+            localStorage.setItem("precioTotal", sumaTotal.toFixed(2));
+            resolve();
+        } catch (error) {
+            reject(new Error(error.message));
+        }
+    });
+}
+
+
+function resetearValores() {
+    return new Promise((resolve, reject) => {
+        try {
+            sumaTotal = 0;
+            historialPrecios = [];
+            document.getElementById("precioTotal").textContent = sumaTotal.toFixed(2);
+            actualizarLocalStorage().then(resolve).catch(reject);
+        } catch (error) {
+            reject(new Error(error.message));
+        }
+    });
 }
